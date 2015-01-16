@@ -332,12 +332,32 @@ namespace Inedo.BuildMasterExtensions.Mercurial
 
 		public IEnumerable<ClientCommand> GetAvailableCommands()
 		{
-			return AvailableClientCommands;
+			//TODO: Had to co-opt Command to choose the repository as the IClientCommandProvider interface seems very
+			//unfinished. When/if the repository is added to ExecuteClientCommand we should switch to AvailableClientCommands
+			//return AvailableClientCommands;
+
+			return this.Repositories
+				.Select(r => new ClientCommand(r.RepositoryName, r.RepositoryPath));
 		}
 
 		public void ExecuteClientCommand(string commandName, string arguments)
 		{
-			throw new NotImplementedException();
+			if (string.IsNullOrWhiteSpace(commandName))
+				throw new ArgumentNullException("commandName");
+			if (string.IsNullOrWhiteSpace(arguments))
+				throw new ArgumentNullException("arguments");
+
+			var repo = this.Repositories.SingleOrDefault(r => string.Equals(r.RepositoryName, commandName, StringComparison.CurrentCulture));
+			if (repo == null)
+				throw new ArgumentException("Command Name didn't match a known repository.");
+			string repositoryPath = repo.GetFullRepositoryPath(this.Agent);
+
+			if (string.IsNullOrEmpty(this.HgExecutablePath) || !File.Exists(this.HgExecutablePath))
+				throw new NotAvailableException("Cannot execute Mercurial command; hg executable not found at '" + this.HgExecutablePath + "' - please specify the path to this executable in the provider's configuration.");
+			if (!repo.IsManagedByBuildMaster && !this.Agent.DirectoryExists(this.Agent.CombinePath(repositoryPath, ".hg")))
+				throw new NotAvailableException("A local repository was not found at: " + repositoryPath);
+
+			this.ExecuteCommandLine(this.HgExecutablePath, arguments, repositoryPath);
 		}
 
 		public string GetClientCommandHelp(string commandName)
@@ -350,7 +370,7 @@ namespace Inedo.BuildMasterExtensions.Mercurial
 		public string GetClientCommandPreview()
 		{
 			//TODO: How are you actually supposed to implement this without the commandName/arguments args?
-			return string.Empty;
+			return "Use Command to choose the target repository and Arguments to supply the full command and arguments.";
 		}
 
 		public bool SupportsCommandHelp
