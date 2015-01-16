@@ -17,7 +17,7 @@ namespace Inedo.BuildMasterExtensions.Mercurial
     /// </summary>
     [ProviderProperties("Mercurial", "Supports Mercurial 1.4 and later; requires Mercurial to be installed.")]
     [CustomEditor(typeof(MercurialProviderEditor))]
-    public sealed class MercurialProvider : SourceControlProviderBase, IMultipleRepositoryProvider<MercurialRepository>, ILabelingProvider, IRevisionProvider
+	public sealed class MercurialProvider : SourceControlProviderBase, IMultipleRepositoryProvider<MercurialRepository>, ILabelingProvider, IRevisionProvider, IClientCommandProvider
     {
         /// <summary>
         /// Gets or sets the path on disk to the hg executable (hg.exe on Windows)
@@ -316,5 +316,48 @@ namespace Inedo.BuildMasterExtensions.Mercurial
                 this.Repositories = Array.ConvertAll(value ?? new RepositoryBase[0], r => (MercurialRepository)r);
             }
         }
-    }
+
+		#region IClientCommandProvider Members
+
+		private static IEnumerable<ClientCommand> AvailableClientCommands = new ClientCommand[]
+		{
+			new ClientCommand("add", "Schedule files to be version controlled and added to the repository."),
+			new ClientCommand("clone", "Create a copy of an existing repository in a new directory."),
+			new ClientCommand("commit", "Commit changes to the given files into the repository."),
+			new ClientCommand("forget", "Mark the specified files so they will no longer be tracked after the next commit."),
+			new ClientCommand("merge", "The current working directory is updated with all changes made in the requested revision since the last common predecessor revision."),
+			new ClientCommand("remove", "Schedule the indicated files for removal from the current branch."),
+			new ClientCommand("update", "Update the repository's working directory to the specified changeset.")
+		};
+
+		public IEnumerable<ClientCommand> GetAvailableCommands()
+		{
+			return AvailableClientCommands;
+		}
+
+		public void ExecuteClientCommand(string commandName, string arguments)
+		{
+			throw new NotImplementedException();
+		}
+
+		public string GetClientCommandHelp(string commandName)
+		{
+			//hg help commandName
+
+			throw new NotImplementedException();
+		}
+
+		public string GetClientCommandPreview()
+		{
+			//TODO: How are you actually supposed to implement this without the commandName/arguments args?
+			return string.Empty;
+		}
+
+		public bool SupportsCommandHelp
+		{
+			get { return true; }
+		}
+
+		#endregion
+	}
 }
