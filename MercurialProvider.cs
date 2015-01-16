@@ -342,6 +342,8 @@ namespace Inedo.BuildMasterExtensions.Mercurial
 
 		public void ExecuteClientCommand(string commandName, string arguments)
 		{
+			this.LogDebug("ExecuteClientCommand called with command:{0} and arguments:{1}", commandName, arguments);
+
 			if (string.IsNullOrWhiteSpace(commandName))
 				throw new ArgumentNullException("commandName");
 			if (string.IsNullOrWhiteSpace(arguments))
