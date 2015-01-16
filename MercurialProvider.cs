@@ -319,7 +319,7 @@ namespace Inedo.BuildMasterExtensions.Mercurial
 
 		#region IClientCommandProvider Members
 
-		private static IEnumerable<ClientCommand> AvailableClientCommands = new ClientCommand[]
+		private static readonly IEnumerable<ClientCommand> AvailableClientCommands = new ClientCommand[]
 		{
 			new ClientCommand("add", "Schedule files to be version controlled and added to the repository."),
 			new ClientCommand("clone", "Create a copy of an existing repository in a new directory."),
@@ -362,9 +362,10 @@ namespace Inedo.BuildMasterExtensions.Mercurial
 
 		public string GetClientCommandHelp(string commandName)
 		{
+			//TODO: We would run this but we're using commandName for repository information
 			//hg help commandName
 
-			throw new NotImplementedException();
+			return string.Empty;
 		}
 
 		public string GetClientCommandPreview()
