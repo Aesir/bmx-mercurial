@@ -17,7 +17,7 @@ namespace Inedo.BuildMasterExtensions.Mercurial
     /// </summary>
     [ProviderProperties("Mercurial", "Supports Mercurial 1.4 and later; requires Mercurial to be installed.")]
     [CustomEditor(typeof(MercurialProviderEditor))]
-	public sealed class MercurialProvider : SourceControlProviderBase, IMultipleRepositoryProvider<MercurialRepository>, ILabelingProvider, IRevisionProvider, IClientCommandProvider
+	public sealed class MercurialProvider : SourceControlProviderBase, IMultipleRepositoryProvider<MercurialRepository>, ILabelingProvider, IRevisionProvider, IClientCommandOutputProvider
     {
         /// <summary>
         /// Gets or sets the path on disk to the hg executable (hg.exe on Windows)
@@ -317,6 +317,8 @@ namespace Inedo.BuildMasterExtensions.Mercurial
             }
         }
 
+		#region IClientCommandOutputProvider Members
+
 		#region IClientCommandProvider Members
 
 		private static readonly IEnumerable<ClientCommand> AvailableClientCommands = new ClientCommand[]
@@ -342,24 +344,7 @@ namespace Inedo.BuildMasterExtensions.Mercurial
 
 		public void ExecuteClientCommand(string commandName, string arguments)
 		{
-			this.LogDebug("ExecuteClientCommand called with command:{0} and arguments:{1}", commandName, arguments);
-
-			if (string.IsNullOrWhiteSpace(commandName))
-				throw new ArgumentNullException("commandName");
-			if (string.IsNullOrWhiteSpace(arguments))
-				throw new ArgumentNullException("arguments");
-
-			var repo = this.Repositories.SingleOrDefault(r => string.Equals(r.RepositoryName, commandName, StringComparison.CurrentCulture));
-			if (repo == null)
-				throw new ArgumentException("Command Name didn't match a known repository.");
-			string repositoryPath = repo.GetFullRepositoryPath(this.Agent);
-
-			if (string.IsNullOrEmpty(this.HgExecutablePath) || !File.Exists(this.HgExecutablePath))
-				throw new NotAvailableException("Cannot execute Mercurial command; hg executable not found at '" + this.HgExecutablePath + "' - please specify the path to this executable in the provider's configuration.");
-			if (!repo.IsManagedByBuildMaster && !this.Agent.DirectoryExists(this.Agent.CombinePath(repositoryPath, ".hg")))
-				throw new NotAvailableException("A local repository was not found at: " + repositoryPath);
-
-			this.ExecuteCommandLine(this.HgExecutablePath, arguments, repositoryPath);
+			ExecuteClientCommand(commandName, arguments, null);
 		}
 
 		public string GetClientCommandHelp(string commandName)
@@ -379,6 +364,34 @@ namespace Inedo.BuildMasterExtensions.Mercurial
 		public bool SupportsCommandHelp
 		{
 			get { return true; }
+		}
+
+		#endregion
+
+		public void ExecuteClientCommand(string commandName, string arguments, string outputFileName)
+		{
+			this.LogDebug("ExecuteClientCommand called with command:{0} and arguments:{1}", commandName, arguments);
+
+			if (string.IsNullOrWhiteSpace(commandName))
+				throw new ArgumentNullException("commandName");
+			if (string.IsNullOrWhiteSpace(arguments))
+				throw new ArgumentNullException("arguments");
+
+			var repo = this.Repositories.SingleOrDefault(r => string.Equals(r.RepositoryName, commandName, StringComparison.CurrentCulture));
+			if (repo == null)
+				throw new ArgumentException("Command Name didn't match a known repository.");
+			string repositoryPath = repo.GetFullRepositoryPath(this.Agent);
+
+			if (string.IsNullOrEmpty(this.HgExecutablePath) || !File.Exists(this.HgExecutablePath))
+				throw new NotAvailableException("Cannot execute Mercurial command; hg executable not found at '" + this.HgExecutablePath + "' - please specify the path to this executable in the provider's configuration.");
+			if (!repo.IsManagedByBuildMaster && !this.Agent.DirectoryExists(this.Agent.CombinePath(repositoryPath, ".hg")))
+				throw new NotAvailableException("A local repository was not found at: " + repositoryPath);
+
+			var result = this.ExecuteCommandLine(this.HgExecutablePath, arguments, repositoryPath);
+			foreach (var line in result.Output)
+			{
+				this.LogInformation(line);
+			}
 		}
 
 		#endregion
